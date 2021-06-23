@@ -3,7 +3,7 @@ const { getParticipationInGenres } = require('../services/genresDepartmentsServi
 const router = express.Router();
 
 
-router.get('/api/genres-departments', async (req, res) => {
+router.get('/genres-departments', async (req, res) => {
   // get gender from query
   let gender = null;
   if (req.query.gender && (req.query.gender == 1 || req.query.gender == 2 || req.query.gender == 3)) {

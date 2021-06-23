@@ -4,7 +4,7 @@ const {
   combineCastAndCrew
 } = require('./utils');
 
-let aggregationBase = [
+const aggregationBase = [
   {
     '$limit': 555000
   }, {

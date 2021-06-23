@@ -1,1 +1,4 @@
 /node_modules
+/adjustInflation.js
+/cpi.csv
+/get-tmdb-data.js

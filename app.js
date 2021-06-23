@@ -24,9 +24,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(require('./routes/index'));
-app.use(require('./routes/timeChart'));
-app.use(require('./routes/genresDepartments'));
+app.use('/', require('./routes/index'));
+app.use('/api', require('./routes/timeChart'));
+app.use('/api', require('./routes/genresDepartments'));
+app.use('/api', require('./routes/budgetRevenue'));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

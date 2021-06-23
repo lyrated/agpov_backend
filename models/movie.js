@@ -5,6 +5,7 @@ const movieSchema = mongoose.Schema({
   backdrop_path: String,
   belongs_to_collection: Object,
   budget: Number,
+  budgetAdjusted: Number,
   cast: [{
     adult: Boolean,
     gender: Number,
@@ -56,6 +57,7 @@ const movieSchema = mongoose.Schema({
   }],
   release_date: String,
   revenue: Number,
+  revenueAdjusted: Number,
   runtime: Number,
   spoken_languages: [{
     iso_639_1: String,
