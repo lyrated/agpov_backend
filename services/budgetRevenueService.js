@@ -43,7 +43,8 @@ const aggregationBase = [
         '$subtract': [
           '$avgRevenue', '$avgBudget'
         ]
-      }
+      },
+      'category': 'women'
     }
   }, {
     '$sort': {
@@ -78,23 +79,27 @@ module.exports = {
       }
 
       let women, men, mixed;
+      aggregation[6]['$addFields']['category'] = 'women';
       women = await Movie.aggregate(aggregation);
 
       if (type == 'acting') {
         aggregation[4]['$match']['lead.gender'] = 2;
+        aggregation[6]['$addFields']['category'] = 'men';
         men = await Movie.aggregate(aggregation);
       } else if (type == 'directing') {
         aggregation[4]['$match']['crew.gender'] = 2;
+        aggregation[6]['$addFields']['category'] = 'men';
         men = await Movie.aggregate(aggregation);
+
         aggregation[4]['$match']['crew.gender'] = { $gt: 0, $lt: 3 };
+        aggregation[6]['$addFields']['category'] = 'mixed';
         mixed = await Movie.aggregate(aggregation);
       }
 
-      return {
-        women: women,
-        men: men,
-        mixeed: mixed
-      };
+      let result = women.concat(men);
+      result = mixed ? result.concat(mixed) : result;
+
+      return result;
     } catch (error) {
       console.error(error);
       return null;
