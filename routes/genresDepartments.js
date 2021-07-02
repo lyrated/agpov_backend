@@ -4,19 +4,19 @@ const router = express.Router();
 
 
 router.get('/genres-departments', async (req, res) => {
-  // get gender from query
-  let gender = null;
-  if (req.query.gender && (req.query.gender == 1 || req.query.gender == 2 || req.query.gender == 3)) {
-    gender = parseInt(req.query.gender);
+  // sample size
+  let size = 555000;
+  if(req.query.size) {
+    size = +req.query.size;
   }
-
+  
   // show only cast/crew
-  let showOnly = null;
-  if (req.query.only && (req.query.only == 'cast' || req.query.only == 'crew')) {
-    showOnly = req.query.only;
+  let dataset = null;
+  if (req.query.dataset && (req.query.dataset == 'cast' || req.query.dataset == 'crew')) {
+    dataset = req.query.dataset;
   }
 
-  let data = await getParticipationInGenres(gender, showOnly);
+  let data = await getParticipationInGenres(size, dataset);
   res.send(data);
 });
 

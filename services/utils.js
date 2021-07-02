@@ -1,4 +1,17 @@
 module.exports = {
+  // get gender as string from number (0, 1, 2, 3)
+  getGender: (number) => {
+    let gender;
+    if (number == 0 || number == 3) {
+      gender = "Undefined/Non-binary";
+    } else if (number == 1) {
+      gender = "Female";
+    } else if (number == 2) {
+      gender = "Male";
+    }
+    return gender;
+  },
+
   // convert array from mongodb aggregations to object { _id: value }
   convertDataArrayToObject: (array) => {
     let obj = {};

@@ -1,6 +1,6 @@
 const Movie = require('../models/movie');
 
-const aggregationBase = [
+const aggregation = [
   {
     '$limit': 555000
   }, {
@@ -57,7 +57,6 @@ module.exports = {
 
   getBudgetAndRevenue: async (limit, type) => {
     try {
-      const aggregation = aggregationBase.map(a => a);
       aggregation[0]['$limit'] = limit;
 
       if (type == 'acting') {

@@ -1,20 +1,9 @@
 const Movie = require('../models/movie');
-const { 
-  combineCastAndCrew,
-  convertDataArrayToObject
-} = require('./utils');
-const limit = 20000; // sample size
-// const limit = 560000;
+const { getGender } = require('./utils');
 
-let aggregationBase = [
+let aggregation = [
   {
-    '$limit': limit
-  }, {
-    '$match': {
-      'genres.0': {
-        '$exists': true
-      }
-    }
+    '$limit': 555000
   }, {
     '$unwind': {
       'path': '$genres',
@@ -26,97 +15,137 @@ let aggregationBase = [
       'preserveNullAndEmptyArrays': false
     }
   }, {
-    '$match': {}
-  }, {
     '$group': {
-      '_id': '$genres.name',
+      '_id': [
+        '$genres.name', '$cast.gender'
+      ],
       'count': {
         '$sum': 1
       }
     }
   }, {
     '$sort': {
-      'count': -1
+      '_id.0': 1
     }
   }
 ];
 
-let getTotalParticipationByGenre = async () => {
-  try {
-    let aggregationTotal = aggregationBase;
-    aggregationTotal[4]['$match'] = { 'cast.gender': { '$gt': 0, '$lt': 3 } };
-    let cast = await Movie.aggregate(aggregationTotal);
-
-    aggregationTotal[3]['$unwind']['path'] = '$crew';
-    aggregationTotal[4]['$match'] = { 'crew.gender': { '$gt': 0, '$lt': 3 } };
-    let crew = await Movie.aggregate(aggregationTotal);
-
-    return {
-      cast: cast,
-      crew: crew
-    };
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
-}
-
 module.exports = {
-  getParticipationInGenres: async (gender, showOnly) => {
+  getParticipationInGenres: async (size, dataset) => {
     try {
-      let total;
-      if (gender != 3) {
-        total = await getTotalParticipationByGenre();
+      let data;
 
-        if (showOnly == 'cast') {
-          total = convertDataArrayToObject(total.cast);
-        } else if (showOnly == 'crew') {
-          total = convertDataArrayToObject(total.crew);
-        } else {
-          total = combineCastAndCrew(total.cast, total.crew);
-        }
+      aggregation[0]['$limit'] = size;
+
+      let getCast = async () => {
+        aggregation[2]['$unwind']['path'] = '$cast';
+        aggregation[3]['$group']['_id'] = [
+          '$genres.name', '$cast.gender'
+        ];
+        const cast = await Movie.aggregate(aggregation);
+        return cast.map(c => {
+          return {
+            "_id": [
+              c['_id'][0], "Acting", c['_id'][1]
+            ],
+            "count": c['count']
+          }
+        });
       }
 
-      let aggregation = aggregationBase;
+      let getCrew = async () => {
+        aggregation[2]['$unwind']['path'] = '$crew';
+        aggregation[3]['$group']['_id'] = [
+          '$genres.name', '$crew.department', '$crew.gender'
+        ];
+        return await Movie.aggregate(aggregation);
+      }
 
-      if (gender == 1 || gender == 2 || gender == 3) {
-        aggregation[3]['$unwind']['path'] = '$cast';
-        aggregation[4]['$match'] = { 'cast.gender': gender };
+      // aggregate
+      if (dataset == 'cast') {
+        data = await getCast();
+      } else if (dataset == 'crew') {
+        data = await getCrew();
       } else {
-        return total;
+        const cast = await getCast();
+        const crew = await getCrew();
+        console.log('###', JSON.stringify(aggregation));
+        data = cast.concat(crew);
       }
 
-      // get data from cast/crew/both
-      let cast, crew, combined;
-      if (!showOnly || showOnly == 'cast') {
-        cast = await Movie.aggregate(aggregation);
-      }
-      if (!showOnly || showOnly == 'crew') {
-        aggregation[3]['$unwind']['path'] = '$crew';
-        aggregation[4]['$match'] = { 'crew.gender': gender };
-        crew = await Movie.aggregate(aggregation);
-      }
-      if (!showOnly) {
-        combined = combineCastAndCrew(cast, crew);
-      } else if (cast) {
-        combined = convertDataArrayToObject(cast);
-      } else if (crew) {
-        combined = convertDataArrayToObject(crew);
-      }
+      // make tree structure: genres -> departments -> gender
+      let values = {
+        name: "Genres",
+        children: [{
+          name: data[0]._id[0],
+          children: [{
+            name: data[0]._id[1],
+            children: [{
+              name: getGender(data[0]._id[2]),
+              value: data[0].count
+            }]
+          }]
+        }]
+      };
+      data.splice(0, 1);
 
-      // for non binary percentages are too low, return whole numbers
-      if (gender == 3) {
-        return combined;
-      }
+      // put data in correct children
+      data.forEach(d => {
+        let genderString = getGender(d._id[2]);
+        let inGenre = false;
+        for (let genre of values.children) block: {
+          if (d._id[0] == genre.name) {
+            inGenre = true;
+            let inDepartment = false;
+            for (let department of genre.children) {
+              if (d._id[1] == department.name) {
+                inDepartment = true;
+                if (genderString == "Undefined/Non-binary") {
+                  let inGender = false;
+                  for (let gender of department.children) {
+                    if (genderString == gender.name) {
+                      inGender = true;
+                      gender.value += d.count;
+                      break block;
+                    }
+                  }
+                  if (!inGender) {
+                    department.children.push({ name: genderString, value: d.count });
+                    break block;
+                  }
+                } else {
+                  department.children.push({ name: genderString, value: d.count });
+                  break block;
+                }
+              }
+            }
+            if (!inDepartment) {
+              genre.children.push({
+                name: d._id[1],
+                children: [{
+                  name: getGender(d._id[2]),
+                  value: d.count
+                }]
+              });
+              break block;
+            }
+          }
+        }
+        if (!inGenre) {
+          values.children.push({
+            name: d._id[0],
+            children: [{
+              name: d._id[1],
+              children: [{
+                name: getGender(d._id[2]),
+                value: d.count
+              }]
+            }]
+          });
+        }
+      });
 
-      // get percentages of each year
-      let percentages = {};
-      Object.keys(combined).forEach(key => {
-        let p = combined[key] / total[key] * 100;
-        percentages[key] = parseFloat(p.toFixed(2));
-      })
-
-      return percentages;
+      return values;
     } catch (error) {
       console.error(error);
       return null;
