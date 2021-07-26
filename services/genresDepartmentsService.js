@@ -1,45 +1,73 @@
 const Movie = require('../models/movie');
 const { getGender } = require('./utils');
 
-let aggregation = [
-  {
-    '$limit': 555000
-  }, {
-    '$unwind': {
-      'path': '$genres',
-      'preserveNullAndEmptyArrays': false
-    }
-  }, {
-    '$unwind': {
-      'path': '$cast',
-      'preserveNullAndEmptyArrays': false
-    }
-  }, {
-    '$group': {
-      '_id': [
-        '$genres.name', '$cast.gender'
-      ],
-      'count': {
-        '$sum': 1
-      }
-    }
-  }, {
-    '$sort': {
-      '_id.0': 1
-    }
-  }
-];
-
 module.exports = {
-  getParticipationInGenres: async (size, dataset) => {
+  getParticipationInGenres: async ({ size, dataset, time }) => {
+    let aggregation = [
+      {
+        '$limit': size
+      }, {
+        '$match': {
+          'release_date': {
+            '$nin': [
+              null, ''
+            ]
+          }
+        }
+      }, {
+        '$addFields': {
+          'date': {
+            '$convert': {
+              'input': '$release_date',
+              'to': 'date'
+            }
+          }
+        }
+      }, {
+        '$addFields': {
+          'year': {
+            '$year': '$date'
+          }
+        }
+      }, {
+        '$match': {
+          'year': {
+            '$gte': time,
+            '$lte': time+9
+          }
+        }
+      }, {
+        '$unwind': {
+          'path': '$genres',
+          'preserveNullAndEmptyArrays': false
+        }
+      }, {
+        '$unwind': {
+          'path': '$cast',
+          'preserveNullAndEmptyArrays': false
+        }
+      }, {
+        '$group': {
+          '_id': [
+            '$genres.name', '$cast.gender'
+          ],
+          'count': {
+            '$sum': 1
+          }
+        }
+      }, {
+        '$sort': {
+          '_id.0': 1
+        }
+      }
+    ];
+
     try {
       let data;
 
-      aggregation[0]['$limit'] = size;
-
       let getCast = async () => {
-        aggregation[2]['$unwind']['path'] = '$cast';
-        aggregation[3]['$group']['_id'] = [
+        aggregation[6]['$unwind']['path'] = '$cast';
+        aggregation[7]['$group']['_id'] = [
           '$genres.name', '$cast.gender'
         ];
         const cast = await Movie.aggregate(aggregation);
@@ -54,8 +82,8 @@ module.exports = {
       }
 
       let getCrew = async () => {
-        aggregation[2]['$unwind']['path'] = '$crew';
-        aggregation[3]['$group']['_id'] = [
+        aggregation[6]['$unwind']['path'] = '$crew';
+        aggregation[7]['$group']['_id'] = [
           '$genres.name', '$crew.department', '$crew.gender'
         ];
         return await Movie.aggregate(aggregation);
