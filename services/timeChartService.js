@@ -156,7 +156,6 @@ module.exports = {
           percentages.push(data);
           series.forEach(se => {
             se.forEach(s => s['data'] = data);
-            console.log('#################', se);
           });
         } else {
           let p = value / totalValue * 100;
