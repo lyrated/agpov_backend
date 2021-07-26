@@ -69,7 +69,6 @@ module.exports = {
       } else {
         const cast = await getCast();
         const crew = await getCrew();
-        console.log('###', JSON.stringify(aggregation));
         data = cast.concat(crew);
       }
 

@@ -1,139 +1,180 @@
 const Movie = require('../models/movie');
-const {
-  convertDataArrayToObject,
-  combineCastAndCrew
-} = require('./utils');
-
-const aggregationBase = [
-  {
-    '$limit': 555000
-  }, {
-    '$match': {
-      'release_date': {
-        '$nin': [
-          null, ''
-        ]
-      }
-    }
-  }, {
-    '$addFields': {
-      'date': {
-        '$convert': {
-          'input': '$release_date',
-          'to': 'date'
-        }
-      }
-    }
-  }, {
-    '$addFields': {
-      'year': {
-        '$year': '$date'
-      }
-    }
-  }, {
-    '$unwind': {
-      'path': '$cast',
-      'preserveNullAndEmptyArrays': false
-    }
-  }, {
-    '$match': {}
-  }, {
-    '$group': {
-      '_id': '$year',
-      'count': {
-        '$sum': 1
-      }
-    }
-  }, {
-    '$sort': {
-      '_id': 1
-    }
-  }
-];
-
-let getTotalParticipationByYear = async (limit) => {
-  try {
-    let aggregationTotal = aggregationBase;
-    aggregationTotal[0]['$limit'] = limit;
-
-    aggregationTotal[4]['$unwind']['path'] = '$cast';
-    aggregationTotal[5]['$match'] = { 'cast.gender': { '$gt': 0, '$lt': 3 } };
-    const cast = await Movie.aggregate(aggregationTotal);
-    
-    aggregationTotal[4]['$unwind']['path'] = '$crew';
-    aggregationTotal[5]['$match'] = { 'crew.gender': { '$gt': 0, '$lt': 3 } };
-    const crew = await Movie.aggregate(aggregationTotal);
-
-    return {
-      cast: cast,
-      crew: crew
-    };
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
-}
+const { combineCastAndCrew } = require('./utils');
 
 module.exports = {
-  getParticipationOverYears: async (size, gender, showOnly) => {
-    try {
-      let total;
-      if (gender != 3) {
-        total = await getTotalParticipationByYear(size);
-
-        if (showOnly == 'cast') {
-          total = convertDataArrayToObject(total.cast);
-        } else if (showOnly == 'crew') {
-          total = convertDataArrayToObject(total.crew);
-        } else {
-          total = combineCastAndCrew(total.cast, total.crew);
+  getParticipationOverYears: async ({ size, starttime, endtime, genre, dep, category }) => {
+    const aggregation = [
+      {
+        '$limit': size
+      }, {
+        '$match': {
+          'release_date': {
+            '$nin': [
+              null, ''
+            ]
+          }
+        }
+      }, {
+        '$addFields': {
+          'date': {
+            '$convert': {
+              'input': '$release_date',
+              'to': 'date'
+            }
+          }
+        }
+      }, {
+        '$addFields': {
+          'year': {
+            '$year': '$date'
+          }
+        }
+      }, {
+        '$unwind': {
+          'path': '$genres',
+          'preserveNullAndEmptyArrays': true
+        }
+      }, {
+        '$unwind': {
+          'path': '$cast',
+          'preserveNullAndEmptyArrays': false
+        }
+      }, {
+        '$match': {}
+      }, {
+        '$group': {
+          '_id': '$year',
+          'count': {
+            '$sum': 1
+          }
+        }
+      }, {
+        '$sort': {
+          '_id': 1
         }
       }
+    ];
 
-      let aggregation = aggregationBase;
-      aggregation[0]['$limit'] = size;
+    // time filter
+    let start = starttime == 0 ? 1912 : starttime;
+    let end = endtime == 0 ? 2021 : endtime;
 
-      if (gender == 1 || gender == 2 || gender == 3) {
-        aggregation[4]['$unwind']['path'] = '$cast';
-        aggregation[5]['$match'] = { 'cast.gender': gender };
-      } else {
-        return total;
-      }
+    // genre filter
+    if (genre) {
+      aggregation[6]['$match']['genres.name'] = genre;
+    } else {
+      delete aggregation[6]['$match']['genres.name'];
+    }
 
-      // get data from cast/crew/both
-      let cast, crew, combined;
-      if (!showOnly || showOnly == 'cast') {
-        cast = await Movie.aggregate(aggregation);
-      }
-      if (!showOnly || showOnly == 'crew') {
-        aggregation[4]['$unwind']['path'] = '$crew';
-        aggregation[5]['$match'] = { 'crew.gender': gender };
+    // category filter
+    if (category) {
+      let cat;
+      if (category == 'genres') cat = '$genres.name';
+      if (category == 'departments') cat = '$crew.department';
+      if (cat) aggregation[7]['$group']['_id'] = ['$year', cat];
+    } else {
+      aggregation[7]['$group']['_id'] = '$year';
+    }
+
+    // get data from cast/crew/both
+    let cast = [], crew = [], combined;
+    let castTotal = [], crewTotal = [], total;
+
+    try {
+      if (dep != 'Acting') {
+        aggregation[5]['$unwind']['path'] = '$crew';
+        aggregation[6]['$match'] = {
+          'crew.gender': 1,
+          'year': { '$gte': start, '$lte': end }
+        };
+
+        // department filter
+        if (dep) {
+          let department = dep;
+          aggregation[6]['$match']['crew.department'] = department;
+        } else {
+          delete aggregation[6]['$match']['crew.department'];
+        }
+
         crew = await Movie.aggregate(aggregation);
-      }
-      if (!showOnly) {
-        combined = combineCastAndCrew(cast, crew);
-      } else if (cast) {
-        combined = convertDataArrayToObject(cast);
-      } else if (crew) {
-        combined = convertDataArrayToObject(crew);
+
+        // get total crew
+        aggregation[6]['$match']['crew.gender'] = { '$gt': 0, '$lt': 3 };
+        crewTotal = await Movie.aggregate(aggregation);
       }
 
-      // for non binary percentages are too low, return whole numbers
-      if (gender == 3) {
-        return combined;
+      if (!dep || dep == 'Acting') {
+        aggregation[5]['$unwind']['path'] = '$cast';
+        aggregation[6]['$match']['cast.gender'] = 1;
+        aggregation[6]['$match']['year'] = { '$gte': start, '$lte': end };
+        delete aggregation[6]['$match']['crew.gender'];
+        delete aggregation[6]['$match']['crew.department'];
+        cast = await Movie.aggregate(aggregation);
+
+        // get total cast
+        aggregation[6]['$match']['cast.gender'] = { '$gt': 0, '$lt': 3 };
+        castTotal = await Movie.aggregate(aggregation);
       }
+
+      combined = combineCastAndCrew(cast, crew);
+      total = combineCastAndCrew(castTotal, crewTotal);
+      // console.log('WOMEN ++++++++++++++', combined);
+      // console.log('TOTAL **************', total);
 
       // get percentages of each year
-      let percentages = [];
+      let percentages = [], series = [];
       Object.keys(combined).forEach(key => {
-        let p = combined[key] / total[key] * 100;
-        percentages.push({
-          'x': key,
-          'y': parseFloat(p.toFixed(2))
-        });
+        let value = combined[key];
+        let totalValue = total[key];
+
+        // if category
+        if (category) {
+          let data = { name: key, total: 0 }
+
+          let totalCount = 0;
+          totalValue.forEach(t => {
+            totalCount += t.count;
+          });
+
+          value.forEach((v, i) => {
+            let num = v.count / totalCount * 100
+            data[v.name] = +(Math.round(num * 100) / 100).toFixed(2);
+            data['total'] += data[v.name];
+
+            let totalNorm = +(Math.round(data['total'] * 100) / 100).toFixed(2);
+            let startNorm = +(Math.round((data['total'] - data[v.name]) * 100) / 100).toFixed(2);
+            let seriesArray = [startNorm, totalNorm];
+            seriesArray['key'] = v.name;
+            if (series[i]) {
+              series[i].push(seriesArray);
+            } else {
+              series[i] = [seriesArray]
+            }
+          });
+
+          data['total'] = +(Math.round(data['total'] * 100) / 100).toFixed(2);
+          percentages.push(data);
+          series.forEach(se => {
+            se.forEach(s => s['data'] = data);
+            console.log('#################', se);
+          });
+        } else {
+          let p = value / totalValue * 100;
+          percentages.push({
+            'x': key,
+            'y': +(Math.round(p * 100) / 100).toFixed(2)
+          });
+        }
       });
 
-      return percentages;
+      if (category) {
+        return {
+          data: percentages,
+          series: series
+        }
+      } else {
+        return percentages;
+      }
     } catch (error) {
       console.error(error);
       return null;
