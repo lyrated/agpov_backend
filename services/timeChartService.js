@@ -1,5 +1,5 @@
 const Movie = require('../models/movie');
-const { combineCastAndCrew } = require('./utils');
+const { combineCastAndCrew, getAllGenres, getAllDepartments } = require('./utils');
 
 module.exports = {
   getParticipationOverYears: async ({ size, starttime, endtime, genre, dep, category }) => {
@@ -109,6 +109,7 @@ module.exports = {
         aggregation[6]['$match']['year'] = { '$gte': start, '$lte': end };
         delete aggregation[6]['$match']['crew.gender'];
         delete aggregation[6]['$match']['crew.department'];
+        if (category == 'departments') aggregation[7]['$group']['_id'] = ['$year', 'Acting'];
         cast = await Movie.aggregate(aggregation);
 
         // get total cast
@@ -118,11 +119,9 @@ module.exports = {
 
       combined = combineCastAndCrew(cast, crew);
       total = combineCastAndCrew(castTotal, crewTotal);
-      // console.log('WOMEN ++++++++++++++', combined);
-      // console.log('TOTAL **************', total);
 
       // get percentages of each year
-      let percentages = [], series = [];
+      let percentages = [];
       Object.keys(combined).forEach(key => {
         let value = combined[key];
         let totalValue = total[key];
@@ -132,31 +131,18 @@ module.exports = {
           let data = { name: key, total: 0 }
 
           let totalCount = 0;
-          totalValue.forEach(t => {
-            totalCount += t.count;
+          Object.keys(totalValue).forEach(t => {
+            totalCount += totalValue[t];
           });
 
-          value.forEach((v, i) => {
-            let num = v.count / totalCount * 100
-            data[v.name] = +(Math.round(num * 100) / 100).toFixed(2);
-            data['total'] += data[v.name];
-
-            let totalNorm = +(Math.round(data['total'] * 100) / 100).toFixed(2);
-            let startNorm = +(Math.round((data['total'] - data[v.name]) * 100) / 100).toFixed(2);
-            let seriesArray = [startNorm, totalNorm];
-            seriesArray['key'] = v.name;
-            if (series[i]) {
-              series[i].push(seriesArray);
-            } else {
-              series[i] = [seriesArray]
-            }
+          Object.keys(value).forEach(v => {
+            let num = value[v] / totalCount * 100
+            data[v] = +(Math.round(num * 100) / 100).toFixed(2);
+            data['total'] += data[v];
           });
 
           data['total'] = +(Math.round(data['total'] * 100) / 100).toFixed(2);
           percentages.push(data);
-          series.forEach(se => {
-            se.forEach(s => s['data'] = data);
-          });
         } else {
           let p = value / totalValue * 100;
           percentages.push({
@@ -167,10 +153,9 @@ module.exports = {
       });
 
       if (category) {
-        return {
-          data: percentages,
-          series: series
-        }
+        let cat = category == 'genres' ? getAllGenres() : getAllDepartments();
+        let columns = ['name', 'Undefined'].concat(Object.values(cat));
+        return { data: percentages, columns: columns };
       } else {
         return percentages;
       }

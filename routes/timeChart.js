@@ -15,6 +15,11 @@ router.get('/time', async (req, res) => {
   // get time
   let start = (req.query.start) ? +req.query.start : 0;
   let end = (req.query.end) ? +req.query.end : 0;
+  let startCopy = start;
+  if (start > end) {
+    start = end;
+    end = startCopy;
+  }
 
   // get genre
   let genre = null;
@@ -32,7 +37,7 @@ router.get('/time', async (req, res) => {
 
   // get category
   let category = null;
-  if (req.query.category && ['genres', 'departments'].includes(req.query.category)) {
+  if (req.query.category && ['genres', 'departments'].includes(req.query.category) && !(genre || dep)) {
     category = req.query.category;
   }
 

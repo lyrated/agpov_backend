@@ -63,11 +63,15 @@ module.exports = {
       let count = c.count;
       if (Array.isArray(key)) {
         key = c._id[0];
-        count = { name: c._id[1], count: c.count };
-        if (combined[key]) {
-          combined[key].push(count);
+        let name = c._id[1] === null ? 'Undefined' : c._id[1];
+        if (!combined[key]) {
+          combined[key] = { [name]: count };
         } else {
-          combined[key] = [count];
+          if (!combined[key][name]) {
+            combined[key][name] = count;
+          } else {
+            combined[key][name] += count;
+          }
         }
       } else {
         if (combined[key]) {
