@@ -58,6 +58,7 @@ module.exports = {
     // time filter
     let start = starttime == 0 ? 1912 : starttime;
     let end = endtime == 0 ? 2021 : endtime;
+    aggregation[6]['$match']['year'] = { '$gte': start, '$lte': end };
 
     // genre filter
     if (genre) {
@@ -83,10 +84,7 @@ module.exports = {
     try {
       if (dep != 'Acting') {
         aggregation[5]['$unwind']['path'] = '$crew';
-        aggregation[6]['$match'] = {
-          'crew.gender': 1,
-          'year': { '$gte': start, '$lte': end }
-        };
+        aggregation[6]['$match']['crew.gender'] = 1;
 
         // department filter
         if (dep) {

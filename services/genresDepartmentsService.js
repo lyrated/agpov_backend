@@ -119,6 +119,11 @@ module.exports = {
       // put data in correct children
       data.forEach(d => {
         let genderString = getGender(d._id[2]);
+        let departmentString = d => {
+          if (d === 'Actors') return 'Background Acting';
+          return d;
+        }
+
         let inGenre = false;
         for (let genre of values.children) block: {
           if (d._id[0] == genre.name) {
@@ -148,7 +153,7 @@ module.exports = {
             }
             if (!inDepartment) {
               genre.children.push({
-                name: d._id[1],
+                name: departmentString(d._id[1]),
                 children: [{
                   name: getGender(d._id[2]),
                   value: d.count
@@ -162,7 +167,7 @@ module.exports = {
           values.children.push({
             name: d._id[0],
             children: [{
-              name: d._id[1],
+              name: departmentString(d._id[1]),
               children: [{
                 name: getGender(d._id[2]),
                 value: d.count
