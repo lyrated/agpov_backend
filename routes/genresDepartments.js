@@ -16,10 +16,10 @@ router.get('/genres-departments', async (req, res) => {
     dataset = req.query.dataset;
   }
 
-  // show time interval 1915, 1925, 1935, ...
-  let time = 2015;
-  if (req.query.time && (req.query.time % 5 == 0) &&
-    (req.query.time >= 1915) && (req.query.time <= 2015)) {
+  // show time interval 1920-1929, 1930-1939, 1940-1949, ...
+  let time = 2010;
+  if (req.query.time && (req.query.time % 10 === 0) &&
+    (req.query.time >= 1920) && (req.query.time <= 2020)) {
     time = +req.query.time;
   }
 
