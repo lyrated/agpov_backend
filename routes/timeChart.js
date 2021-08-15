@@ -30,7 +30,7 @@ router.get('/time', async (req, res) => {
 
   // get departments:
   let dep = null;
-  const allDeps = getAllDepartments(true)
+  const allDeps = getAllDepartments(true);
   if (req.query.dep && allDeps[req.query.dep]) {
     dep = allDeps[req.query.dep];
   }

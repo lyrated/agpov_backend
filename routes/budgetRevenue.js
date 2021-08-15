@@ -1,5 +1,6 @@
 const express = require('express');
 const { getBudgetAndRevenue } = require('../services/budgetRevenueService');
+const { getAllDepartments } = require('../services/utils');
 const router = express.Router();
 
 router.get('/profit', async (req, res) => {
@@ -10,8 +11,9 @@ router.get('/profit', async (req, res) => {
   }
 
   // type: lead actress or directors
-  let type = 'directing';
-  if (req.query.dataset && (req.query.dataset == 'acting' || req.query.dataset == 'directing')) {
+  let type = 'acting';
+  const allDeps = getAllDepartments(true);
+  if (req.query.dataset && allDeps[req.query.dataset]) {
     type = req.query.dataset;
   }
 
