@@ -1,4 +1,5 @@
 const Movie = require('../models/movie');
+const { getAllDepartments } = require('./utils');
 
 
 module.exports = {
@@ -45,16 +46,20 @@ module.exports = {
               '$avgRevenue', '$avgBudget'
             ]
           },
-          'category': 'women'
+          'category': 'female'
         }
+      }, {
+        '$sort': { 'profit': -1 }
       }
     ];
+
+    const allDeps = getAllDepartments(true);
 
     try {
       aggregation[0]['$limit'] = limit;
 
       // female
-      if (type == 'acting') {
+      if (type === 'acting') {
         aggregation[3]['$addFields'] = {
           'lead': {
             '$arrayElemAt': ['$cast', 0]
@@ -63,51 +68,52 @@ module.exports = {
         aggregation[4]['$match'] = {
           'lead.gender': 1
         }
-      } else if (type == 'directing') {
+      } else if (type !== 'acting' && allDeps[type]) {
         aggregation[3]['$addFields'] = {
-          'directors': {
+          'dep': {
             '$filter': {
               'input': '$crew',
-              'as': 'director',
+              'as': 'd',
               'cond': {
                 '$eq': [
-                  '$$director.department', 'Directing'
+                  '$$d.department', allDeps[type]
                 ]
               }
             }
           }
         };
         aggregation[4]['$match'] = {
-          'directors.gender': {
+          'dep.gender': {
             '$nin': [0, 2, 3]
           }
         }
       }
 
       let women, men, mixed;
-      aggregation[6]['$addFields']['category'] = 'women';
+      aggregation[6]['$addFields']['category'] = 'female';
       women = await Movie.aggregate(aggregation);
 
       // male
       if (type == 'acting') {
         aggregation[4]['$match']['lead.gender'] = 2;
-        aggregation[6]['$addFields']['category'] = 'men';
+        aggregation[6]['$addFields']['category'] = 'male';
         men = await Movie.aggregate(aggregation);
-      } else if (type == 'directing') {
-        aggregation[4]['$match']['directors.gender'] = 2;
-        aggregation[6]['$addFields']['category'] = 'men';
+      } else if (type !== 'acting' && allDeps[type]) {
+        aggregation[4]['$match']['dep.gender'] = 2;
+        aggregation[6]['$addFields']['category'] = 'male';
         men = await Movie.aggregate(aggregation);
 
         // mixed
         aggregation[4]['$match'] = {
           '$and': [{
-              'directors.gender': { '$nin': [0, 3] }
-            }, {
-              'directors.gender': 1
-            }, {
-              'directors.gender': 2
-            }
-          ]};
+            'dep.gender': { '$nin': [0, 3] }
+          }, {
+            'dep.gender': 1
+          }, {
+            'dep.gender': 2
+          }
+          ]
+        };
         aggregation[6]['$addFields']['category'] = 'mixed';
         mixed = await Movie.aggregate(aggregation);
       }
