@@ -11,10 +11,12 @@ module.exports = {
       }, {
         '$match': {
           'budgetAdjusted': {
-            '$gt': 0
+            '$lt': 5000000000,
+            '$gt': 1
           },
           'revenueAdjusted': {
-            '$gt': 0
+            '$lt': 5000000000,
+            '$gt': 1
           }
         }
       }, {
@@ -99,7 +101,7 @@ module.exports = {
         aggregation[6]['$addFields']['category'] = 'male';
         men = await Movie.aggregate(aggregation);
       } else if (type !== 'acting' && allDeps[type]) {
-        aggregation[4]['$match']['dep.gender'] = 2;
+        aggregation[4]['$match']['dep.gender'] = { '$nin': [0, 1, 3] };
         aggregation[6]['$addFields']['category'] = 'male';
         men = await Movie.aggregate(aggregation);
 
@@ -111,8 +113,7 @@ module.exports = {
             'dep.gender': 1
           }, {
             'dep.gender': 2
-          }
-          ]
+          }]
         };
         aggregation[6]['$addFields']['category'] = 'mixed';
         mixed = await Movie.aggregate(aggregation);
