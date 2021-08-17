@@ -2,3 +2,6 @@
 /adjustInflation.js
 /cpi.csv
 /get-tmdb-data.js
+/save-data.js
+
+/.env
