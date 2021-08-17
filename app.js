@@ -4,7 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-const db = require('./config/db');
+require('dotenv').config();
 
 var app = express();
 
@@ -30,12 +30,12 @@ app.use('/api', require('./routes/genresDepartments'));
 app.use('/api', require('./routes/budgetRevenue'));
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
@@ -47,4 +47,8 @@ app.use(function(err, req, res, next) {
 
 module.exports = app;
 
-db.connectDB();
+
+if (process.env.NODE_ENV === 'development') {
+  const db = require('./config/db');
+  db.connectDB();
+}
