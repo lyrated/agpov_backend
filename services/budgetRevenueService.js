@@ -1,5 +1,5 @@
 const Movie = require('../models/movie');
-const { getAllDepartments } = require('./utils');
+const { getAllDepartments, readFromFile } = require('./utils');
 
 
 module.exports = {
@@ -127,6 +127,12 @@ module.exports = {
       console.error(error);
       return null;
     }
+  },
+
+  getBudgetAndRevenueFromFiles: async (dataset) => {
+    const path = `./data/profit/${dataset}.json`;
+    const data = readFromFile(path);
+    return data;
   }
 
 }

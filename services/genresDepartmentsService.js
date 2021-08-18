@@ -1,5 +1,5 @@
 const Movie = require('../models/movie');
-const { getGender } = require('./utils');
+const { getGender, readFromFile } = require('./utils');
 
 module.exports = {
   getParticipationInGenres: async ({ size, dataset, time }) => {
@@ -182,5 +182,12 @@ module.exports = {
       console.error(error);
       return null;
     }
+  },
+
+  getParticipationFromFiles: async ({ dataset, time }) => {
+    let d = dataset === null ? 'null' : dataset;
+    const path = `./data/gd/${time}-${d}.json`;
+    const data = readFromFile(path);
+    return data;
   }
 }

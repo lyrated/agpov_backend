@@ -1,12 +1,12 @@
 const express = require('express');
-const { getBudgetAndRevenue } = require('../services/budgetRevenueService');
+const { getBudgetAndRevenue, getBudgetAndRevenueFromFiles } = require('../services/budgetRevenueService');
 const { getAllDepartments } = require('../services/utils');
 const router = express.Router();
 
 router.get('/profit', async (req, res) => {
   // sample size
   let size = 555000;
-  if(req.query.size) {
+  if (req.query.size) {
     size = +req.query.size;
   }
 
@@ -17,7 +17,12 @@ router.get('/profit', async (req, res) => {
     type = req.query.dataset;
   }
 
-  const data = await getBudgetAndRevenue(size, type);
+  let data;
+  if (process.env.NODE_ENV === 'production') {
+    data = await getBudgetAndRevenueFromFiles(type);
+  } else {
+    data = await getBudgetAndRevenue(size, type);
+  }
   res.send(data);
 });
 

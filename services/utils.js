@@ -1,3 +1,5 @@
+const fs = require('fs').promises;
+
 module.exports = {
   // get gender as string from number (0, 1, 2, 3)
   getGender: (number) => {
@@ -86,5 +88,15 @@ module.exports = {
     crew.forEach(add);
 
     return combined;
+  },
+
+  readFromFile: async (path) => {
+    try {
+      const json = await fs.readFile(path, 'utf-8');
+      return JSON.parse(json);
+    } catch (err) {
+      console.error('! ERROR while reading file', err);
+      return [];
+    }
   }
 }

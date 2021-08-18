@@ -1,5 +1,5 @@
 const express = require('express');
-const { getParticipationOverYears } = require('../services/timeChartService');
+const { getParticipationOverYears, getParticipationFromFiles } = require('../services/timeChartService');
 const { getAllGenres, getAllDepartments } = require('../services/utils');
 const router = express.Router();
 
@@ -13,8 +13,8 @@ router.get('/time', async (req, res) => {
   let size = (req.query.size) ? +req.query.size : 555000;
 
   // get time
-  let start = (req.query.start) ? +req.query.start : 0;
-  let end = (req.query.end) ? +req.query.end : 0;
+  let start = (req.query.start) ? +req.query.start : 1920;
+  let end = (req.query.end) ? +req.query.end : 2020;
   let startCopy = start;
   if (start > end) {
     start = end;
@@ -41,14 +41,21 @@ router.get('/time', async (req, res) => {
     category = req.query.category;
   }
 
-  let data = await getParticipationOverYears({
-    size: size, 
-    starttime: start, 
-    endtime: end, 
-    genre: genre, 
+  const params = {
+    size: size,
+    starttime: start,
+    endtime: end,
+    genre: genre,
     dep: dep,
     category: category
-  });
+  }
+
+  let data;
+  if (process.env.NODE_ENV === 'production') {
+    data = await getParticipationFromFiles(params);
+  } else {
+    data = await getParticipationOverYears(params);
+  }
   res.send(data);
 });
 

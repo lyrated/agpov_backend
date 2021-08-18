@@ -1,5 +1,5 @@
 const express = require('express');
-const { getParticipationInGenres } = require('../services/genresDepartmentsService');
+const { getParticipationInGenres, getParticipationFromFiles } = require('../services/genresDepartmentsService');
 const router = express.Router();
 
 
@@ -23,11 +23,18 @@ router.get('/genres-departments', async (req, res) => {
     time = +req.query.time;
   }
 
-  let data = await getParticipationInGenres({
+  const params = {
     size: size,
     dataset: dataset,
     time: time
-  });
+  }
+
+  let data;
+  if (process.env.NODE_ENV === 'production') {
+    data = await getParticipationFromFiles(params);
+  } else {
+    data = await getParticipationInGenres(params);
+  }
   res.send(data);
 });
 

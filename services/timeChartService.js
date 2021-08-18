@@ -1,5 +1,5 @@
 const Movie = require('../models/movie');
-const { combineCastAndCrew, getAllGenres, getAllDepartments } = require('./utils');
+const { combineCastAndCrew, getAllGenres, getAllDepartments, readFromFile } = require('./utils');
 
 module.exports = {
   getParticipationOverYears: async ({ size, starttime, endtime, genre, dep, category }) => {
@@ -56,8 +56,8 @@ module.exports = {
     ];
 
     // time filter
-    let start = starttime == 0 ? 1912 : starttime;
-    let end = endtime == 0 ? 2021 : endtime;
+    let start = starttime == 0 ? 1920 : starttime;
+    let end = endtime == 0 ? 2020 : endtime;
     aggregation[6]['$match']['year'] = { '$gte': start, '$lte': end };
 
     // genre filter
@@ -167,5 +167,21 @@ module.exports = {
       console.error(error);
       return null;
     }
+  },
+
+  getParticipationFromFiles: async ({ starttime, endtime, genre, dep, category }) => {
+    const allGenres = getAllGenres();
+    const iG = Object.values(allGenres).indexOf(genre);
+    let g = genre === null ? 'all' : Object.keys(allGenres)[iG];
+
+    const allDeps = getAllDepartments(true);
+    const iD = Object.values(allDeps).indexOf(dep);
+    let d = dep === null ? 'all' : Object.keys(allDeps)[iD];
+
+    let c = category === null ? 'null' : category;
+
+    const path = `./data/time/${starttime}-${endtime}-${g}-${d}-${c}.json`;
+    const data = readFromFile(path);
+    return data;
   }
 }
