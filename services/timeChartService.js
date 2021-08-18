@@ -117,12 +117,18 @@ module.exports = {
 
       combined = combineCastAndCrew(cast, crew);
       total = combineCastAndCrew(castTotal, crewTotal);
-
+      
       // get percentages of each year
-      let percentages = [];
-      Object.keys(combined).forEach(key => {
-        let value = combined[key];
-        let totalValue = total[key];
+      const percentages = [];
+      const years = [];
+      if (Object.keys(combined).length !== 0) {
+        for (let i = start; i <= end; i++) {
+          years.push(i);
+        }
+      }
+      years.forEach(key => {
+        let value = combined[key] ? combined[key] : 0;
+        let totalValue = total[key] ? total[key] : 1;
 
         // if category
         if (category) {
