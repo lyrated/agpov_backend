@@ -16,7 +16,7 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '/src/build')));
 
 if (process.env.NODE_ENV === 'development') {
   app.use((req, res, next) => {
@@ -26,7 +26,6 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-app.use('/', require('./routes/index'));
 app.use('/api', require('./routes/timeChart'));
 app.use('/api', require('./routes/genresDepartments'));
 app.use('/api', require('./routes/budgetRevenue'));
@@ -46,6 +45,12 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '/src/build/index.html'));
+  });
+}
 
 module.exports = app;
 
